@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: recipe-app
+    restart: unless-stopped
+    ports:
+      - "9000:3000"  # Docker app runs on port 9000
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://host.docker.internal:27017/recipe
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - recipe-network
+
+networks:
+  recipe-network:
+    driver: bridge

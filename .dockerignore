@@ -1,0 +1,40 @@
+# Node modules
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next
+out
+dist
+
+# Environment files
+.env
+.env*.local
+
+# Testing
+coverage
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+*.log
+
+# IDE
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+
+# README
+README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
