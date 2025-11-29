@@ -17,22 +17,26 @@ recipe/
 ## 📱 **app/** - Next.js App Router
 
 ### Pages:
-- `/` - Homepage (Recipe Browser)
+- `/` - Homepage (Recipe Browser - Trang chủ duyệt công thức)
 - `/login` - Đăng nhập
 - `/register` - Đăng ký
-- `/profile` - Trang cá nhân
-- `/meal-planner` - Lên kế hoạch món ăn
-- `/shopping-list` - Danh sách mua sắm
-- `/admin` - Trang quản trị
+- `/forgot-password` - Quên mật khẩu
+- `/reset-password` - Đặt lại mật khẩu
+- `/profile` - Trang cá nhân người dùng
+- `/meal-planner` - Lập kế hoạch bữa ăn theo tuần
+- `/shopping-list` - Danh sách mua sắm tự động
+- `/admin` - Trang quản trị (chỉ admin)
 
 ### API Routes:
 - `/api/auth/*` - Authentication (login, register, logout)
-- `/api/recipes/*` - CRUD recipes
-- `/api/comments/*` - CRUD comments
+- `/api/recipes/*` - CRUD recipes + review/restore
+- `/api/comments/*` - CRUD comments on recipes
 - `/api/meal-plans/*` - CRUD meal plans
-- `/api/shopping-list/*` - CRUD shopping list
-- `/api/users/*` - User management
-- `/api/admin/*` - Admin functions
+- `/api/shopping-list/*` - Generate shopping list
+- `/api/users/*` - User management + health profile
+- `/api/user/profile/*` - Current user profile
+- `/api/admin/users/*` - Admin user management
+- `/api/ai/recommendations/*` - AI meal recommendations
 
 ---
 
@@ -86,18 +90,40 @@ recipe/
 
 ## ⚙️ **backend/** - Express.js Backend
 
-**Trạng thái:** Đã tạo nhưng chưa tích hợp
+**Trạng thái:** RESTful API đầy đủ chức năng (có thể dùng thay thế Next.js API Routes)
 
 ```
 backend/
-├── src/              # Source code (models, routes, middleware)
-├── scripts/          # Database scripts
-├── docs/             # Documentation (9 files)
-├── docker-compose.yml
+├── src/
+│   ├── server.ts              # Entry point
+│   ├── config/
+│   │   └── database.ts        # MongoDB connection
+│   ├── models/                # Mongoose models
+│   │   ├── User.ts           # User model
+│   │   ├── Recipe.ts         # Recipe model
+│   │   └── MealPlan.ts       # Meal plan model
+│   ├── routes/                # API routes
+│   │   ├── auth.ts           # Authentication routes
+│   │   ├── recipes.ts        # Recipe CRUD
+│   │   ├── users.ts          # User management
+│   │   └── mealPlans.ts      # Meal planning
+│   ├── middleware/
+│   │   ├── auth.ts           # JWT authentication
+│   │   └── errorHandler.ts   # Error handling
+│   └── services/
+│       └── emailService.ts   # Email service (forgot password)
+├── scripts/
+│   ├── check-data.js         # Kiểm tra dữ liệu DB
+│   ├── clear-database.js     # Xóa database
+│   └── create-admin.js       # Tạo admin user
+├── docs/                      # 9 documentation files
+├── docker-compose.yml         # Docker setup
 ├── Dockerfile
 ├── mongo-init.js
 └── setup-mongodb-user.js
 ```
+
+**Xem chi tiết:** [backend/README.md](backend/README.md) và [backend/STRUCTURE.md](backend/STRUCTURE.md)
 
 Xem chi tiết: [backend/STRUCTURE.md](backend/STRUCTURE.md)
 

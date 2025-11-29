@@ -43,24 +43,40 @@ npm run dev           # http://localhost:5000
 ### **Pages:**
 ```
 app/
-├── page.tsx              # / - Trang chủ
-├── login/page.tsx        # /login - Đăng nhập
-├── register/page.tsx     # /register - Đăng ký
-├── profile/page.tsx      # /profile - Trang cá nhân
-├── meal-planner/page.tsx # /meal-planner - Lên kế hoạch
-├── shopping-list/page.tsx# /shopping-list - Danh sách mua
-└── admin/page.tsx        # /admin - Quản trị
+├── page.tsx                    # / - Trang chủ (Recipe Browser)
+├── login/page.tsx              # /login - Đăng nhập
+├── register/page.tsx           # /register - Đăng ký
+├── forgot-password/page.tsx    # /forgot-password - Quên mật khẩu
+├── reset-password/page.tsx     # /reset-password - Đặt lại mật khẩu
+├── profile/page.tsx            # /profile - Trang cá nhân
+├── meal-planner/page.tsx       # /meal-planner - Lên kế hoạch bữa ăn
+├── shopping-list/page.tsx      # /shopping-list - Danh sách mua sắm
+└── admin/page.tsx              # /admin - Quản trị (admin only)
 ```
 
 ### **API Routes:**
 ```
 app/api/
-├── auth/              # Login, Register, Logout
-├── recipes/           # CRUD recipes
-├── comments/          # CRUD comments
-├── meal-plans/        # CRUD meal plans
-├── shopping-list/     # CRUD shopping list
-└── users/             # User management
+├── auth/
+│   ├── login/         # POST - Đăng nhập
+│   ├── register/      # POST - Đăng ký
+│   └── logout/        # POST - Đăng xuất
+├── recipes/
+│   ├── route.ts       # GET, POST - CRUD recipes
+│   ├── restore/       # POST - Khôi phục recipe đã xóa
+│   └── review/        # POST - Duyệt/từ chối recipe (admin)
+├── comments/          # POST, DELETE - CRUD comments
+├── meal-plans/        # GET, POST - CRUD meal plans
+├── shopping-list/     # GET, POST - Tạo shopping list
+├── users/
+│   ├── route.ts       # GET - Danh sách users (admin)
+│   └── health-profile/ # GET, POST - Health profile
+├── user/
+│   └── profile/       # GET, PUT - User profile
+├── admin/
+│   └── users/         # PATCH, DELETE - Quản lý users
+└── ai/
+    └── recommendations/ # POST - AI gợi ý món ăn
 ```
 
 **📖 Xem thêm:** Không có file riêng (Next.js convention)
@@ -74,23 +90,43 @@ app/api/
 ### **Cấu trúc:**
 ```
 client/
-├── components/       # React Components
-│   ├── auth/        # Auth components
-│   ├── recipe/      # Recipe components
-│   ├── meal/        # Meal planning
-│   ├── shopping/    # Shopping list
-│   ├── layout/      # Header, Theme
-│   ├── shared/      # Client-only wrapper
-│   └── ui/          # shadcn/ui components
+├── components/              # React Components
+│   ├── auth/               # Authentication
+│   │   ├── auth-guard.tsx         # Protected routes
+│   │   ├── user-data-sync.tsx     # Sync user data
+│   │   └── cleanup-localstorage.tsx
+│   ├── recipe/             # Recipe Management
+│   │   ├── recipe-browser.tsx     # Browse & filter
+│   │   ├── recipe-card.tsx        # Recipe card
+│   │   ├── recipe-detail-dialog.tsx
+│   │   └── recipe-form-dialog.tsx
+│   ├── meal/               # Meal Planning
+│   │   ├── meal-planner.tsx
+│   │   ├── meal-slot.tsx
+│   │   └── add-meal-dialog.tsx
+│   ├── shopping/           # Shopping List
+│   │   └── shopping-list.tsx
+│   ├── layout/             # Layout
+│   │   ├── header.tsx
+│   │   ├── footer.tsx
+│   │   └── theme-provider.tsx
+│   ├── shared/             # Shared
+│   │   └── client-only.tsx
+│   ├── ui/                 # shadcn/ui (12 components)
+│   ├── health-profile-dialog.tsx
+│   └── ai-recommendations.tsx
 │
-├── lib/             # Utilities & Stores
-│   ├── auth-store.ts
-│   ├── recipe-store.ts
-│   ├── types.ts
-│   ├── utils.ts
-│   └── mongodb.ts
+├── lib/                    # Utilities & Stores
+│   ├── auth-store.ts      # Zustand auth store
+│   ├── recipe-store.ts    # Zustand recipe store
+│   ├── auth.ts            # Auth utilities
+│   ├── api-client.ts      # API client
+│   ├── types.ts           # TypeScript types
+│   ├── utils.ts           # Helper functions
+│   ├── mongodb.ts         # MongoDB client
+│   └── recipes-data.ts    # Default recipes
 │
-└── styles/          # CSS
+└── styles/                 # CSS
     └── globals.css
 ```
 
