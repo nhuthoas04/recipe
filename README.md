@@ -15,20 +15,45 @@ Recipe App là một ứng dụng web toàn diện cho phép người dùng:
 
 - **Frontend:** Next.js 15 (App Router) + React + TypeScript
 - **Backend:** Express.js + TypeScript (RESTful API)
-- **Database:** MongoDB (Local hoặc Atlas)
+- **Database:** MongoDB Atlas (Cloud)
 - **Authentication:** JWT + HttpOnly Cookies
 - **UI Components:** shadcn/ui + Tailwind CSS
 - **State Management:** Zustand
+- **Deployment:** Docker + Docker Compose
 
 ## 🚀 Cài đặt nhanh
 
-### 1. Clone repository
+### 🐳 Option 1: Chạy với Docker (Khuyến nghị)
+
+```bash
+# Clone repository
+git clone https://github.com/nhuthoas04/recipe.git
+cd recipe
+
+# Cấu hình MongoDB Atlas connection trong:
+# - backend/.env
+# - docker-compose.yml
+# - .env.local
+
+# Build và chạy
+docker-compose up -d --build
+
+# Truy cập:
+# - Frontend: http://localhost:3000
+# - Backend: http://localhost:5000
+```
+
+📖 Chi tiết: [DOCKER.md](DOCKER.md)
+
+### 💻 Option 2: Chạy Development thủ công
+
+#### 1. Clone repository
 ```bash
 git clone https://github.com/nhuthoas04/recipe.git
 cd recipe
 ```
 
-### 2. Cài đặt dependencies
+#### 2. Cài đặt dependencies
 
 **Frontend:**
 ```bash
@@ -41,7 +66,7 @@ cd backend
 npm install
 ```
 
-### 3. Cấu hình MongoDB
+#### 3. Cấu hình MongoDB
 
 **Tùy chọn A: MongoDB Atlas (Cloud - Khuyến nghị)**
 - Xem hướng dẫn chi tiết: [backend/docs/MONGODB_ATLAS_SETUP.md](backend/docs/MONGODB_ATLAS_SETUP.md)
@@ -53,25 +78,29 @@ cd backend
 docker-compose up -d
 ```
 
-### 4. Cấu hình môi trường
+#### 4. Cấu hình môi trường
 
 **Frontend (.env.local):**
 ```env
-MONGODB_URI=mongodb+srv://admin:yourpassword@cluster0.abc.mongodb.net/recipe?retryWrites=true&w=majority
+NEXT_PUBLIC_MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
 JWT_SECRET=your-random-secret-key-min-32-chars
-NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
 **Backend (.env):**
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/recipe-app
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+JWT_SECRET=same-as-frontend-secret
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
 ```
 
-### 5. Chạy ứng dụng
+#### 5. Chạy ứng dụng
 
 **Development:**
 ```bash

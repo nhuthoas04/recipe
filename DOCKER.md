@@ -5,8 +5,16 @@
 ### Yêu cầu
 - Docker Desktop đã cài đặt
 - Docker Compose
+- MongoDB Atlas account (hoặc MongoDB server có sẵn)
 
-### Bước 1: Build và chạy tất cả services
+### Bước 1: Cấu hình MongoDB Atlas
+
+Cập nhật MongoDB connection string trong:
+- `backend/.env`: `MONGODB_URI`
+- `docker-compose.yml`: `MONGODB_URI` trong environment của backend
+- `.env.local`: `NEXT_PUBLIC_MONGODB_URI`
+
+### Bước 2: Build và chạy tất cả services
 
 ```bash
 # Tại thư mục gốc của project
@@ -14,8 +22,7 @@ docker-compose up -d --build
 ```
 
 Lệnh này sẽ:
-- ✅ Tạo MongoDB container (port 27017)
-- ✅ Build và chạy Backend API (port 5000)
+- ✅ Build và chạy Backend API (port 5000) kết nối MongoDB Atlas
 - ✅ Build và chạy Frontend (port 3000)
 
 ### Bước 2: Kiểm tra services đang chạy
@@ -33,14 +40,13 @@ docker-compose logs -f
 # Xem logs từng service
 docker-compose logs -f frontend
 docker-compose logs -f backend
-docker-compose logs -f mongodb
 ```
 
 ### Bước 4: Truy cập ứng dụng
 
 - 🌐 Frontend: http://localhost:3000
 - 🔧 Backend API: http://localhost:5000
-- 🗄️ MongoDB: localhost:27017
+- 🗄️ MongoDB: MongoDB Atlas (cloud)
 
 ### Dừng và xóa containers
 
@@ -48,16 +54,16 @@ docker-compose logs -f mongodb
 # Dừng tất cả services
 docker-compose down
 
-# Dừng và xóa cả volumes (data)
-docker-compose down -v
+# Rebuild lại từ đầu
+docker-compose up -d --build
 ```
 
 ## 📦 Cấu trúc Docker
 
 ```
 recipe/
-├── docker-compose.yml          # Orchestrate tất cả services
-├── Dockerfile                  # Frontend (Next.js)
+├── docker-compose.yml          # Orchestrate frontend + backend
+├── Dockerfile                  # Frontend (Next.js standalone)
 ├── .dockerignore              # Ignore files khi build frontend
 └── backend/
     ├── Dockerfile.backend     # Backend (Express.js)
@@ -66,24 +72,24 @@ recipe/
 
 ## 🔧 Services
 
-### 1. MongoDB (mongodb)
-- Image: mongo:7
-- Port: 27017
-- Username: admin
-- Password: admin123
-- Database: goiymonan
-
-### 2. Backend API (backend)
+### 1. Backend API (backend)
 - Build từ: ./backend/Dockerfile.backend
 - Port: 5000
 - Env: Production
-- Kết nối MongoDB qua network nội bộ
+- Kết nối: MongoDB Atlas Cloud
+- Image size: ~200MB
 
-### 3. Frontend (frontend)
+### 2. Frontend (frontend)
 - Build từ: ./Dockerfile
 - Port: 3000
 - Env: Production
 - Standalone Next.js build
+- Image size: ~150MB
+- Features:
+  - ✅ External image support (remotePatterns)
+  - ✅ Server-side rendering
+  - ✅ API routes
+  - ✅ Static optimization
 
 ## ⚡ Tips
 
@@ -102,25 +108,26 @@ docker stats
 ```bash
 docker exec -it recipe-frontend sh
 docker exec -it recipe-backend sh
-docker exec -it recipe-mongodb mongosh
 ```
 
 ### Clear tất cả và rebuild
 ```bash
-docker-compose down -v
+docker-compose down
 docker system prune -a
 docker-compose up -d --build
 ```
 
 ## 🔒 Production Notes
 
-Khi deploy production, nhớ thay đổi:
-1. ✅ MongoDB credentials trong docker-compose.yml
-2. ✅ JWT_SECRET trong environment variables
-3. ✅ SMTP credentials
-4. ✅ Sử dụng MongoDB Atlas thay vì local MongoDB
-5. ✅ Enable HTTPS/SSL
-6. ✅ Set proper CORS origins
+Khi deploy production, nhớ:
+1. ✅ Sử dụng MongoDB Atlas với proper credentials
+2. ✅ Thay đổi JWT_SECRET trong environment variables
+3. ✅ Cập nhật SMTP credentials (nếu dùng email features)
+4. ✅ Set proper CORS origins trong backend
+5. ✅ Enable HTTPS/SSL cho domain thật
+6. ✅ Sử dụng environment variables thay vì hardcode
+7. ✅ Set NODE_ENV=production
+8. ✅ Configure next.config.mjs với domain images cho phép
 
 ## 🐛 Troubleshooting
 
@@ -129,7 +136,9 @@ Khi deploy production, nhớ thay đổi:
 # Windows
 netstat -ano | findstr :3000
 netstat -ano | findstr :5000
-netstat -ano | findstr :27017
+
+# Kill process nếu cần
+taskkill /PID <PID> /F
 
 # Hoặc thay đổi port trong docker-compose.yml
 ```
@@ -138,13 +147,50 @@ netstat -ano | findstr :27017
 ```bash
 docker-compose logs backend
 docker-compose logs frontend
+
+# Kiểm tra chi tiết
+docker inspect recipe-backend
+docker inspect recipe-frontend
 ```
 
-### MongoDB connection failed
+### MongoDB Atlas connection failed
 ```bash
-# Kiểm tra MongoDB có chạy không
-docker-compose ps mongodb
+# Kiểm tra MongoDB URI trong logs
+docker-compose logs backend | grep "MongoDB"
 
-# Restart MongoDB
-docker-compose restart mongodb
+# Kiểm tra network connectivity
+docker exec -it recipe-backend sh
+ping cluster0.awyu0je.mongodb.net
+
+# Verify environment variables
+docker exec -it recipe-backend printenv | grep MONGODB
+```
+
+### Images không hiển thị
+- ✅ Đã fix: `next.config.mjs` có `remotePatterns` cho external images
+- ✅ Verify: Kiểm tra browser console cho image loading errors
+- ✅ Test: Thử truy cập trực tiếp image URL
+
+### Recipes không load
+- ✅ Đã fix: `recipe-browser.tsx` có `recipes` trong useMemo dependencies
+- ✅ Verify: Check browser console log "Recipes loaded: X"
+- ✅ Test: Hard refresh browser (Ctrl+F5)
+
+## 📝 Environment Variables
+
+### Backend (.env)
+```env
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+JWT_SECRET=your_secret_key
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+```
+
+### Frontend (.env.local)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+JWT_SECRET=same_as_backend
 ```
