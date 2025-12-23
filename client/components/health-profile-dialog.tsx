@@ -94,7 +94,7 @@ export function HealthProfileDialog({ open, onComplete }: HealthProfileDialogPro
     })
 
     try {
-      const response = await fetch('http://localhost:5000/api/users/health-profile', {
+      const response = await fetch('/api/users/health-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -81,6 +81,12 @@ export default function ProfilePage() {
       return
     }
 
+    // Redirect admin về trang admin, không cho vào profile
+    if (user?.email === "admin@recipe.com") {
+      router.push("/admin")
+      return
+    }
+
     // Reset edit state when user changes
     if (user) {
       setEditAge(user.age || 0)
@@ -146,8 +152,8 @@ export default function ProfilePage() {
     }
 
     try {
-      // Gọi backend Express API
-      const res = await fetch('http://localhost:5000/api/users/health-profile', {
+      // Gọi Next.js API route (sẽ forward đến backend trong Docker)
+      const res = await fetch('/api/users/health-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -34,6 +34,7 @@ export function RecipeBrowser() {
   const [mounted, setMounted] = useState(false)
   const [isContributeDialogOpen, setIsContributeDialogOpen] = useState(false)
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(true)
+  const [commentRefreshKey, setCommentRefreshKey] = useState(0) // Force re-render when comments change
   const { isAuthenticated, user } = useAuthStore()
   
   // Chỉ lấy những giá trị cần thiết từ store để tránh re-render
@@ -170,7 +171,11 @@ export function RecipeBrowser() {
       ) : filteredRecipes.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} onClick={() => setSelectedRecipe(recipe)} />
+            <RecipeCard 
+              key={`${recipe.id}-${commentRefreshKey}`} 
+              recipe={recipe} 
+              onClick={() => setSelectedRecipe(recipe)} 
+            />
           ))}
         </div>
       ) : (
@@ -180,7 +185,11 @@ export function RecipeBrowser() {
       )}
 
       {/* Recipe Detail Dialog */}
-      <RecipeDetailDialog recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />
+      <RecipeDetailDialog 
+        recipe={selectedRecipe} 
+        onClose={() => setSelectedRecipe(null)}
+        onCommentChange={() => setCommentRefreshKey(prev => prev + 1)}
+      />
       
       {/* Contribute Recipe Dialog */}
       <RecipeFormDialog 

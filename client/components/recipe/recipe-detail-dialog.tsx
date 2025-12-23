@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { X, Clock, Users, ChefHat, Plus, Send, Trash2, Edit2, MessageCircle, Heart, Bookmark } from "lucide-react"
+import { X, Clock, Users, ChefHat, Plus, Send, Trash2, Edit2, MessageCircle, Heart, Bookmark, Reply, ThumbsUp, ChevronDown, ChevronUp } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,9 +19,10 @@ import { vi } from "date-fns/locale"
 interface RecipeDetailDialogProps {
   recipe: Recipe | null
   onClose: () => void
+  onCommentChange?: () => void
 }
 
-export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeDetailDialogProps) {
   const router = useRouter()
   const { user, isAuthenticated, updateUser } = useAuthStore()
   const [comments, setComments] = useState<Comment[]>([])
@@ -29,6 +30,11 @@ export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState("")
   const [loading, setLoading] = useState(false)
+  
+  // Reply states
+  const [replyingToId, setReplyingToId] = useState<string | null>(null)
+  const [replyContent, setReplyContent] = useState("")
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set())
   
   // Like and Save states
   const [isLiked, setIsLiked] = useState(user?.likedRecipes?.includes(recipe?.id || '') || false)
@@ -161,6 +167,131 @@ export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps)
     router.push("/meal-planner")
   }
 
+  // Like comment handler
+  const handleLikeComment = async (commentId: string, isReply: boolean = false, parentId?: string) => {
+    if (!isAuthenticated || !user) {
+      toast.error("Vui lòng đăng nhập để thích bình luận")
+      return
+    }
+
+    try {
+      const res = await fetch("/api/comments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commentId,
+          userId: user.id,
+        }),
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        // Update comments state
+        setComments(prevComments => 
+          prevComments.map(comment => {
+            if (comment.id === commentId) {
+              // Update parent comment
+              const newLikes = data.isLiked 
+                ? [...(comment.likes || []), user.id]
+                : (comment.likes || []).filter(id => id !== user.id)
+              return { ...comment, likes: newLikes, likesCount: data.likesCount }
+            }
+            if (comment.replies) {
+              // Update reply in parent comment
+              return {
+                ...comment,
+                replies: comment.replies.map(reply => 
+                  reply.id === commentId 
+                    ? { 
+                        ...reply, 
+                        likes: data.isLiked 
+                          ? [...(reply.likes || []), user.id]
+                          : (reply.likes || []).filter(id => id !== user.id),
+                        likesCount: data.likesCount 
+                      }
+                    : reply
+                )
+              }
+            }
+            return comment
+          })
+        )
+      }
+    } catch (error) {
+      console.error("Like error:", error)
+      toast.error("Có lỗi xảy ra")
+    }
+  }
+
+  // Reply to comment handler
+  const handleSubmitReply = async (parentId: string) => {
+    if (!isAuthenticated || !user) {
+      toast.error("Vui lòng đăng nhập để trả lời")
+      return
+    }
+
+    if (!replyContent.trim()) {
+      toast.error("Vui lòng nhập nội dung trả lời")
+      return
+    }
+
+    setLoading(true)
+    const loadingToast = toast.loading("Đang gửi trả lời...")
+
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipeId: recipe.id,
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          content: replyContent,
+          parentId: parentId,
+        }),
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        // Add reply to parent comment
+        setComments(prevComments =>
+          prevComments.map(comment =>
+            comment.id === parentId
+              ? { ...comment, replies: [...(comment.replies || []), data.comment] }
+              : comment
+          )
+        )
+        setReplyContent("")
+        setReplyingToId(null)
+        // Auto expand replies
+        setExpandedReplies(prev => new Set(prev).add(parentId))
+        toast.success("Đã gửi trả lời!", { id: loadingToast })
+        // Trigger refresh for parent component
+        onCommentChange?.()
+      } else {
+        toast.error(data.error || "Lỗi khi gửi trả lời", { id: loadingToast })
+      }
+    } catch (error) {
+      toast.error("Đã xảy ra lỗi", { id: loadingToast })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Toggle replies visibility
+  const toggleReplies = (commentId: string) => {
+    setExpandedReplies(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(commentId)) {
+        newSet.delete(commentId)
+      } else {
+        newSet.add(commentId)
+      }
+      return newSet
+    })
+  }
+
   const handleSubmitComment = async () => {
     if (!isAuthenticated || !user) {
       toast.error("Vui lòng đăng nhập để bình luận")
@@ -190,9 +321,11 @@ export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps)
 
       const data = await res.json()
       if (data.success) {
-        setComments([data.comment, ...comments])
+        setComments([{ ...data.comment, replies: [] }, ...comments])
         setNewComment("")
         toast.success("Đã gửi bình luận!", { id: loadingToast })
+        // Trigger refresh for parent component
+        onCommentChange?.()
       } else {
         toast.error(data.error || "Lỗi khi gửi bình luận", { id: loadingToast })
       }
@@ -225,8 +358,18 @@ export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps)
       console.log("Delete response:", data)
       
       if (data.success) {
-        setComments(comments.filter((c) => c.id !== commentId))
+        // Remove comment or reply from state
+        setComments(prevComments => 
+          prevComments
+            .filter((c) => c.id !== commentId) // Remove parent comment
+            .map(comment => ({
+              ...comment,
+              replies: comment.replies?.filter(r => r.id !== commentId) // Remove reply
+            }))
+        )
         toast.success("Đã xóa bình luận!", { id: loadingToast })
+        // Trigger refresh for parent component
+        onCommentChange?.()
       } else {
         toast.error(data.error || "Lỗi khi xóa bình luận", { id: loadingToast })
       }
@@ -489,7 +632,7 @@ export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps)
             <div className="p-4 border-b bg-muted/30">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-primary" />
-                Bình luận ({comments.length})
+                Bình luận ({comments.length + comments.reduce((acc, c) => acc + (c.replies?.length || 0), 0)})
               </h3>
             </div>
 
@@ -596,7 +739,176 @@ export function RecipeDetailDialog({ recipe, onClose }: RecipeDetailDialogProps)
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm mt-2 break-words">{comment.content}</p>
+                      <>
+                        <p className="text-sm mt-2 break-words">{comment.content}</p>
+                        
+                        {/* Like and Reply buttons */}
+                        <div className="flex items-center gap-3 mt-2 pt-2 border-t border-muted">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`h-7 gap-1 text-xs ${
+                              comment.likes?.includes(user?.id || '') 
+                                ? 'text-blue-600' 
+                                : 'text-muted-foreground'
+                            }`}
+                            onClick={() => handleLikeComment(comment.id)}
+                          >
+                            <ThumbsUp className={`h-3.5 w-3.5 ${
+                              comment.likes?.includes(user?.id || '') ? 'fill-blue-600' : ''
+                            }`} />
+                            <span>Thích</span>
+                            {(comment.likesCount || 0) > 0 && (
+                              <span className="ml-0.5">({comment.likesCount})</span>
+                            )}
+                          </Button>
+                          
+                          {isAuthenticated && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 text-xs text-muted-foreground"
+                              onClick={() => {
+                                setReplyingToId(replyingToId === comment.id ? null : comment.id)
+                                setReplyContent("")
+                              }}
+                            >
+                              <Reply className="h-3.5 w-3.5" />
+                              <span>Trả lời</span>
+                            </Button>
+                          )}
+                          
+                          {/* Show replies toggle */}
+                          {comment.replies && comment.replies.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 gap-1 text-xs text-primary"
+                              onClick={() => toggleReplies(comment.id)}
+                            >
+                              {expandedReplies.has(comment.id) ? (
+                                <>
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                  <span>Ẩn {comment.replies.length} phản hồi</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                  <span>Xem {comment.replies.length} phản hồi</span>
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Reply Input */}
+                        {replyingToId === comment.id && (
+                          <div className="mt-2 pl-4 border-l-2 border-primary/30">
+                            <div className="flex gap-2">
+                              <Input
+                                value={replyContent}
+                                onChange={(e) => setReplyContent(e.target.value)}
+                                placeholder={`Trả lời ${comment.userName}...`}
+                                className="text-sm h-8"
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault()
+                                    handleSubmitReply(comment.id)
+                                  }
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                className="h-8 px-3"
+                                onClick={() => handleSubmitReply(comment.id)}
+                                disabled={loading || !replyContent.trim()}
+                              >
+                                <Send className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Nested Replies */}
+                        {expandedReplies.has(comment.id) && comment.replies && comment.replies.length > 0 && (
+                          <div className="mt-3 pl-4 border-l-2 border-muted space-y-2">
+                            {comment.replies.map((reply) => (
+                              <div key={reply.id} className="p-2 rounded-lg bg-background/50">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-secondary-foreground text-xs font-bold">
+                                      {reply.userName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-xs">{reply.userName}</p>
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(reply.createdAt), {
+                                          addSuffix: true,
+                                          locale: vi,
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Delete button for reply owner or admin */}
+                                  {isAuthenticated && user && (
+                                    (reply.userId === user.id || user.email === "admin@recipe.com") && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                        onClick={() => handleDeleteComment(reply.id)}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    )
+                                  )}
+                                </div>
+                                
+                                <p className="text-sm mt-1 break-words">{reply.content}</p>
+                                
+                                {/* Like reply button and Reply button */}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`h-6 gap-1 text-xs ${
+                                      reply.likes?.includes(user?.id || '') 
+                                        ? 'text-blue-600' 
+                                        : 'text-muted-foreground'
+                                    }`}
+                                    onClick={() => handleLikeComment(reply.id, true, comment.id)}
+                                  >
+                                    <ThumbsUp className={`h-3 w-3 ${
+                                      reply.likes?.includes(user?.id || '') ? 'fill-blue-600' : ''
+                                    }`} />
+                                    <span>Thích</span>
+                                    {(reply.likesCount || 0) > 0 && (
+                                      <span className="ml-0.5">({reply.likesCount})</span>
+                                    )}
+                                  </Button>
+                                  
+                                  {/* Reply to reply button - mention user name */}
+                                  {isAuthenticated && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 gap-1 text-xs text-muted-foreground"
+                                      onClick={() => {
+                                        setReplyingToId(comment.id)
+                                        setReplyContent(`@${reply.userName} `)
+                                      }}
+                                    >
+                                      <Reply className="h-3 w-3" />
+                                      <span>Trả lời</span>
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 ))

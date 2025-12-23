@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Use internal Docker network URL for server-side requests
+const BACKEND_URL = process.env.INTERNAL_API_URL || 'http://localhost:5000';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -18,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward to backend
-    const response = await fetch('http://localhost:5000/api/users/save-recipe', {
+    const response = await fetch(`${BACKEND_URL}/api/users/save-recipe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

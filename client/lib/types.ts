@@ -88,4 +88,10 @@ export interface Comment {
   content: string
   createdAt: Date
   updatedAt?: Date
+  // Like functionality
+  likes?: string[] // Array of user IDs who liked
+  likesCount?: number
+  // Reply functionality  
+  parentId?: string // Parent comment ID for replies
+  replies?: Comment[] // Nested replies
 }

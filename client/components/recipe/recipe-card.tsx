@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect } from "react"
 import Image from "next/image"
-import { Clock, Users, ChefHat, Heart, Bookmark } from "lucide-react"
+import { Clock, Users, ChefHat, Heart, Bookmark, MessageCircle } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,7 @@ function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
   const [isSaved, setIsSaved] = useState(false)
   const [likesCount, setLikesCount] = useState(recipe.likesCount || 0)
   const [savesCount, setSavesCount] = useState(recipe.savesCount || 0)
+  const [commentsCount, setCommentsCount] = useState(0)
   const [isLiking, setIsLiking] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -39,6 +40,23 @@ function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
     setLikesCount(recipe.likesCount || 0)
     setSavesCount(recipe.savesCount || 0)
   }, [recipe.likesCount, recipe.savesCount])
+
+  // Load comments count
+  useEffect(() => {
+    const loadCommentsCount = async () => {
+      if (!recipe.id) return
+      try {
+        const res = await fetch(`/api/comments?recipeId=${recipe.id}&countOnly=true`)
+        const data = await res.json()
+        if (data.success) {
+          setCommentsCount(data.count || 0)
+        }
+      } catch (error) {
+        console.error("Error loading comments count:", error)
+      }
+    }
+    loadCommentsCount()
+  }, [recipe.id])
 
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -179,7 +197,7 @@ function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
           </div>
         </div>
 
-        {/* Like and Save buttons */}
+        {/* Like, Save and Comment buttons */}
         <div className="flex items-center gap-2 pt-2">
           <Button
             variant="ghost"
@@ -201,6 +219,16 @@ function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
           >
             <Bookmark className={`h-5 w-5 ${isSaved ? 'fill-blue-500 text-blue-500' : ''}`} />
             <span className="text-sm font-medium">{savesCount}</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClick}
+            className="h-9 gap-1.5 hover:bg-primary/10 hover:text-primary"
+          >
+            <MessageCircle className="h-5 w-5" />
+            <span className="text-sm font-medium">{commentsCount}</span>
           </Button>
         </div>
       </CardContent>

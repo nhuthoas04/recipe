@@ -39,6 +39,7 @@ services:
       - MONGODB_URI=mongodb+srv://nhuthoas04:123@cluster0.awyu0je.mongodb.net/goiymonan?retryWrites=true&w=majority&appName=Cluster0
       - JWT_SECRET=8f9e7d6c5b4a3928171615141312111009080706050403020100abcdefghijklmnop
       - NEXT_PUBLIC_API_URL=http://localhost:5000
+      - INTERNAL_API_URL=http://backend:5000
     depends_on:
       - backend
     networks:

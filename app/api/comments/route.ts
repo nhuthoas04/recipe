@@ -2,11 +2,12 @@ import { NextResponse } from "next/server"
 import clientPromise from "@/lib/mongodb"
 import { ObjectId } from "mongodb"
 
-// GET - Lấy comments của một recipe
+// GET - Lấy comments của một recipe (bao gồm nested replies)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const recipeId = searchParams.get("recipeId")
+    const countOnly = searchParams.get("countOnly") // Chỉ lấy số lượng
 
     if (!recipeId) {
       return NextResponse.json(
@@ -18,26 +19,74 @@ export async function GET(request: Request) {
     const client = await clientPromise
     const db = client.db("recipe-app")
     
-    const comments = await db
+    // Nếu chỉ cần đếm số lượng
+    if (countOnly === "true") {
+      const count = await db
+        .collection("comments")
+        .countDocuments({ recipeId, parentId: { $exists: false } })
+      
+      const repliesCount = await db
+        .collection("comments")
+        .countDocuments({ recipeId, parentId: { $exists: true } })
+      
+      return NextResponse.json({
+        success: true,
+        count: count + repliesCount,
+        commentsCount: count,
+        repliesCount: repliesCount,
+      })
+    }
+    
+    // Lấy tất cả comments (cả parent và replies)
+    const allComments = await db
       .collection("comments")
       .find({ recipeId })
       .sort({ createdAt: -1 })
       .toArray()
 
-    const formattedComments = comments.map(comment => ({
-      id: comment._id.toString(),
-      recipeId: comment.recipeId,
-      userId: comment.userId,
-      userName: comment.userName,
-      userEmail: comment.userEmail,
-      content: comment.content,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
+    // Tách parent comments và replies
+    const parentComments: any[] = []
+    const repliesMap: { [key: string]: any[] } = {}
+
+    allComments.forEach(comment => {
+      const formattedComment = {
+        id: comment._id.toString(),
+        recipeId: comment.recipeId,
+        userId: comment.userId,
+        userName: comment.userName,
+        userEmail: comment.userEmail,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+        likes: comment.likes || [],
+        likesCount: (comment.likes || []).length,
+        parentId: comment.parentId,
+      }
+
+      if (comment.parentId) {
+        // Là reply
+        if (!repliesMap[comment.parentId]) {
+          repliesMap[comment.parentId] = []
+        }
+        repliesMap[comment.parentId].push(formattedComment)
+      } else {
+        // Là parent comment
+        parentComments.push(formattedComment)
+      }
+    })
+
+    // Gắn replies vào parent comments
+    const commentsWithReplies = parentComments.map(comment => ({
+      ...comment,
+      replies: (repliesMap[comment.id] || []).sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      ),
     }))
 
     return NextResponse.json({
       success: true,
-      comments: formattedComments,
+      comments: commentsWithReplies,
+      totalCount: allComments.length,
     })
   } catch (error: any) {
     console.error("Get comments error:", error)
@@ -48,11 +97,11 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Tạo comment mới
+// POST - Tạo comment mới (hoặc reply)
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { recipeId, userId, userName, userEmail, content } = body
+    const { recipeId, userId, userName, userEmail, content, parentId } = body
 
     if (!recipeId || !userId || !userName || !content) {
       return NextResponse.json(
@@ -71,13 +120,32 @@ export async function POST(request: Request) {
     const client = await clientPromise
     const db = client.db("recipe-app")
 
-    const newComment = {
+    // Nếu là reply, kiểm tra parent comment có tồn tại không
+    if (parentId) {
+      const parentComment = await db.collection("comments").findOne({
+        _id: new ObjectId(parentId),
+      })
+      if (!parentComment) {
+        return NextResponse.json(
+          { success: false, error: "Parent comment not found" },
+          { status: 404 }
+        )
+      }
+    }
+
+    const newComment: any = {
       recipeId,
       userId,
       userName,
       userEmail,
       content: content.trim(),
       createdAt: new Date(),
+      likes: [],
+    }
+
+    // Nếu là reply, thêm parentId
+    if (parentId) {
+      newComment.parentId = parentId
     }
 
     const result = await db.collection("comments").insertOne(newComment)
@@ -87,6 +155,7 @@ export async function POST(request: Request) {
       comment: {
         id: result.insertedId.toString(),
         ...newComment,
+        likesCount: 0,
       },
     })
   } catch (error: any) {
@@ -229,6 +298,66 @@ export async function PUT(request: Request) {
     })
   } catch (error: any) {
     console.error("Update comment error:", error)
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH - Like/unlike comment
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json()
+    const { commentId, userId, action } = body
+
+    if (!commentId || !userId) {
+      return NextResponse.json(
+        { success: false, error: "Comment ID and User ID are required" },
+        { status: 400 }
+      )
+    }
+
+    const client = await clientPromise
+    const db = client.db("recipe-app")
+
+    const comment = await db.collection("comments").findOne({
+      _id: new ObjectId(commentId),
+    })
+
+    if (!comment) {
+      return NextResponse.json(
+        { success: false, error: "Comment not found" },
+        { status: 404 }
+      )
+    }
+
+    const currentLikes = comment.likes || []
+    const hasLiked = currentLikes.includes(userId)
+    
+    let updateOperation
+    if (hasLiked) {
+      // Unlike - remove userId from likes array
+      updateOperation = { $pull: { likes: userId } }
+    } else {
+      // Like - add userId to likes array
+      updateOperation = { $addToSet: { likes: userId } }
+    }
+
+    await db.collection("comments").updateOne(
+      { _id: new ObjectId(commentId) },
+      updateOperation
+    )
+
+    const newLikesCount = hasLiked ? currentLikes.length - 1 : currentLikes.length + 1
+
+    return NextResponse.json({
+      success: true,
+      isLiked: !hasLiked,
+      likesCount: newLikesCount,
+    })
+  } catch (error: any) {
+    console.error("Like comment error:", error)
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

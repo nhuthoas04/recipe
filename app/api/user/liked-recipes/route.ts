@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Use internal Docker network URL for server-side requests
+const BACKEND_URL = process.env.INTERNAL_API_URL || 'http://localhost:5000';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('Authorization')?.replace('Bearer ', '') ||
@@ -13,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Forward to backend
-    const response = await fetch('http://localhost:5000/api/users/liked-recipes', {
+    const response = await fetch(`${BACKEND_URL}/api/users/liked-recipes`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

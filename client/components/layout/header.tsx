@@ -132,12 +132,15 @@ export function Header() {
             <div className="ml-4 pl-4 border-l flex items-center gap-2">
               {isAuthenticated && user ? (
                 <>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/profile">
-                      <User className="mr-2 h-4 w-4" />
-                      {user.name || "Tài khoản"}
-                    </Link>
-                  </Button>
+                  {/* Chỉ hiện link Profile cho user thường, không phải admin */}
+                  {user.email !== "admin@recipe.com" && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/profile">
+                        <User className="mr-2 h-4 w-4" />
+                        {user.name || "Tài khoản"}
+                      </Link>
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Đăng xuất
