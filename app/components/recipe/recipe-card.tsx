@@ -17,7 +17,7 @@ interface RecipeCardProps {
 
 function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
   const totalTime = recipe.prepTime + recipe.cookTime
-  const { user, isAuthenticated, updateUser } = useAuthStore()
+  const { user, isAuthenticated, updateUser, getToken } = useAuthStore()
   
   const [isLiked, setIsLiked] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
@@ -54,7 +54,7 @@ function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
     setIsLiking(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       console.log('Like recipe - token exists:', !!token, 'recipeId:', recipe.id)
       
       const response = await fetch('/api/user/like-recipe', {
@@ -106,7 +106,7 @@ function RecipeCardComponent({ recipe, onClick }: RecipeCardProps) {
     setIsSaving(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       console.log('Save recipe - token exists:', !!token, 'recipeId:', recipe.id)
       
       const response = await fetch('/api/user/save-recipe', {

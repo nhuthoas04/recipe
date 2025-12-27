@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Search, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,7 @@ export function RecipeBrowser() {
   const [isContributeDialogOpen, setIsContributeDialogOpen] = useState(false)
   const [isLoadingRecipes, setIsLoadingRecipes] = useState(true)
   const [commentRefreshKey, setCommentRefreshKey] = useState(0) // Force re-render when comments change
+  const [likeSaveRefreshKey, setLikeSaveRefreshKey] = useState(0) // Force re-render when likes/saves change
   const { isAuthenticated, user } = useAuthStore()
   
   // Chỉ lấy những giá trị cần thiết từ store để tránh re-render
@@ -75,6 +76,30 @@ export function RecipeBrowser() {
     if (!mounted) return [];
     return getFilteredRecipes();
   }, [mounted, recipes, searchQuery, selectedCategory, selectedCuisine, getFilteredRecipes]);
+
+  // Handle like/save changes from dialog - update recipe in store
+  const handleLikeSaveChange = useCallback((recipeId: string, field: 'likesCount' | 'savesCount', newValue: number) => {
+    console.log('[RecipeBrowser] handleLikeSaveChange:', { recipeId, field, newValue })
+    
+    // Update recipes in store
+    const currentRecipes = useRecipeStore.getState().recipes
+    const updatedRecipes = currentRecipes.map(recipe => 
+      recipe.id === recipeId 
+        ? { ...recipe, [field]: newValue }
+        : recipe
+    )
+    useRecipeStore.setState({ recipes: updatedRecipes })
+    
+    // Also update selectedRecipe if it's the same recipe
+    setSelectedRecipe(prev => 
+      prev?.id === recipeId 
+        ? { ...prev, [field]: newValue }
+        : prev
+    )
+    
+    // Force re-render of cards
+    setLikeSaveRefreshKey(prev => prev + 1)
+  }, [])
 
   const handleContributeClose = async () => {
     setIsContributeDialogOpen(false)
@@ -172,7 +197,7 @@ export function RecipeBrowser() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredRecipes.map((recipe) => (
             <RecipeCard 
-              key={`${recipe.id}-${commentRefreshKey}`} 
+              key={`${recipe.id}-${commentRefreshKey}-${likeSaveRefreshKey}`} 
               recipe={recipe} 
               onClick={() => setSelectedRecipe(recipe)} 
             />
@@ -189,6 +214,7 @@ export function RecipeBrowser() {
         recipe={selectedRecipe} 
         onClose={() => setSelectedRecipe(null)}
         onCommentChange={() => setCommentRefreshKey(prev => prev + 1)}
+        onLikeSaveChange={handleLikeSaveChange}
       />
       
       {/* Contribute Recipe Dialog */}

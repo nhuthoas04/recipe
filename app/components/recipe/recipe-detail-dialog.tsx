@@ -21,12 +21,13 @@ import { vi } from "date-fns/locale"
 interface RecipeDetailDialogProps {
   recipe: Recipe | null
   onClose: () => void
-  onCommentChange?: () => void
+  onCommentChange?: (delta?: number) => void
+  onLikeSaveChange?: (recipeId: string, field: 'likesCount' | 'savesCount', newValue: number) => void
 }
 
-export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeDetailDialogProps) {
+export function RecipeDetailDialog({ recipe, onClose, onCommentChange, onLikeSaveChange }: RecipeDetailDialogProps) {
   const router = useRouter()
-  const { user, isAuthenticated, updateUser } = useAuthStore()
+  const { user, isAuthenticated, updateUser, getToken } = useAuthStore()
   const updateRecipeCommentsCount = useRecipeStore((state) => state.updateRecipeCommentsCount)
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
@@ -56,16 +57,24 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
       loadComments()
       setIsLiked(user?.likedRecipes?.includes(recipe.id) || false)
       setIsSaved(user?.savedRecipes?.includes(recipe.id) || false)
-      setLikesCount(recipe.likesCount || 0)
-      setSavesCount(recipe.savesCount || 0)
     }
   }, [recipe?.id, user?.likedRecipes, user?.savedRecipes])
 
+  // Sync likesCount and savesCount with recipe prop (from parent)
+  useEffect(() => {
+    if (recipe) {
+      setLikesCount(recipe.likesCount || 0)
+      setSavesCount(recipe.savesCount || 0)
+    }
+  }, [recipe?.id, recipe?.likesCount, recipe?.savesCount])
+
   const loadComments = async () => {
     if (!recipe?.id) return
+    console.log('[RecipeDetailDialog] Loading comments for recipeId:', recipe.id)
     try {
       const res = await fetch(`/api/comments?recipeId=${recipe.id}`)
       const data = await res.json()
+      console.log('[RecipeDetailDialog] Comments response:', data)
       if (data.success) {
         setComments(data.comments)
       }
@@ -84,7 +93,9 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
     setIsLiking(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
+      console.log('[Dialog] Like request - recipeId:', recipe?.id, 'token exists:', !!token)
+      
       const response = await fetch('/api/user/like-recipe', {
         method: 'POST',
         headers: { 
@@ -95,8 +106,10 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
       })
 
       const data = await response.json()
+      console.log('[Dialog] Like response:', data)
       
       if (data.success) {
+        console.log('[Dialog] Updating likesCount to:', data.likesCount)
         setIsLiked(data.isLiked)
         setLikesCount(data.likesCount)
         
@@ -105,6 +118,11 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
             ...user,
             likedRecipes: data.likedRecipes
           })
+        }
+        
+        // Update parent component (AI Recommendations)
+        if (recipe?.id) {
+          onLikeSaveChange?.(recipe.id, 'likesCount', data.likesCount)
         }
         
         toast.success(data.isLiked ? 'Đã thích công thức' : 'Đã bỏ thích')
@@ -129,7 +147,7 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
     setIsSaving(true)
 
     try {
-      const token = localStorage.getItem('token')
+      const token = getToken()
       const response = await fetch('/api/user/save-recipe', {
         method: 'POST',
         headers: { 
@@ -150,6 +168,11 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
             ...user,
             savedRecipes: data.savedRecipes
           })
+        }
+        
+        // Update parent component (AI Recommendations)
+        if (recipe?.id) {
+          onLikeSaveChange?.(recipe.id, 'savesCount', data.savesCount)
         }
         
         toast.success(data.isSaved ? 'Đã lưu công thức' : 'Đã bỏ lưu')
@@ -277,7 +300,7 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
           updateRecipeCommentsCount(recipe.id, 1)
         }
         // Trigger refresh for parent component
-        onCommentChange?.()
+        onCommentChange?.(1)
       } else {
         toast.error(data.error || "Lỗi khi gửi trả lời", { id: loadingToast })
       }
@@ -338,7 +361,7 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
           updateRecipeCommentsCount(recipe.id, 1)
         }
         // Trigger refresh for parent component
-        onCommentChange?.()
+        onCommentChange?.(1)
       } else {
         toast.error(data.error || "Lỗi khi gửi bình luận", { id: loadingToast })
       }
@@ -385,8 +408,8 @@ export function RecipeDetailDialog({ recipe, onClose, onCommentChange }: RecipeD
         if (recipe?.id) {
           updateRecipeCommentsCount(recipe.id, -1)
         }
-        // Trigger refresh for parent component
-        onCommentChange?.()
+        // Trigger refresh for parent component with delta -1 (delete)
+        onCommentChange?.(-1)
       } else {
         toast.error(data.error || "Lỗi khi xóa bình luận", { id: loadingToast })
       }

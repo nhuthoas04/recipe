@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/lib/auth-store"
 import { Header } from "@/components/layout/header"
@@ -205,6 +205,32 @@ export default function ProfilePage() {
         : [...prev, preference]
     )
   }
+
+  // Handle like/save changes from dialog - update recipes in state
+  const handleLikeSaveChange = useCallback((recipeId: string, field: 'likesCount' | 'savesCount', newValue: number) => {
+    console.log('[ProfilePage] handleLikeSaveChange:', { recipeId, field, newValue })
+    
+    // Update saved recipes
+    setSavedRecipes(prev => prev.map(recipe => 
+      recipe.id === recipeId 
+        ? { ...recipe, [field]: newValue }
+        : recipe
+    ))
+    
+    // Update liked recipes
+    setLikedRecipes(prev => prev.map(recipe => 
+      recipe.id === recipeId 
+        ? { ...recipe, [field]: newValue }
+        : recipe
+    ))
+    
+    // Update selected recipe if it's the same
+    setSelectedRecipe(prev => 
+      prev?.id === recipeId 
+        ? { ...prev, [field]: newValue }
+        : prev
+    )
+  }, [])
 
   if (!isAuthenticated || !user) {
     return null
@@ -538,6 +564,7 @@ export default function ProfilePage() {
         <RecipeDetailDialog
           recipe={selectedRecipe}
           onClose={() => setSelectedRecipe(null)}
+          onLikeSaveChange={handleLikeSaveChange}
         />
       )}
 

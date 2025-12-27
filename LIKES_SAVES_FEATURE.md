@@ -2,158 +2,118 @@
 
 ## Tổng quan
 Đã thêm chức năng cho phép người dùng:
-- ❤️ **Thích (Like)** công thức yêu thích
-- 🔖 **Lưu (Save)** công thức để xem sau
+- ❤️ **Thích (Like)** công thức yêu thích - cập nhật real-time
+- 🔖 **Lưu (Save)** công thức để xem sau - cập nhật real-time
 - 📊 Xem số lượng likes và saves trên mỗi công thức
 - 📱 Quản lý danh sách recipes đã thích và đã lưu trong trang cá nhân
 
-## Các thay đổi đã thực hiện
+## Kiến trúc
 
-### 1. Backend Changes
+### Token Storage (Updated 2025-12-27)
+- JWT token được lưu trong **Zustand store** (persisted) thay vì chỉ localStorage
+- `getToken()` function để lấy token từ store hoặc fallback localStorage
+- Điều này đảm bảo token được persist cùng với user data
 
-#### Models
-- **User Model** (`backend/src/models/User.ts`):
-  - Thêm `savedRecipes: ObjectId[]` - Danh sách recipes đã lưu
-  - Thêm `likedRecipes: ObjectId[]` - Danh sách recipes đã thích
+### State Flow
+```
+User clicks Like → API call with token → Update local state
+                                       → Call onLikeSaveChange callback
+                                       → Parent updates store/state
+                                       → Cards re-render with new count
+```
 
-- **Recipe Model** (`backend/src/models/Recipe.ts`):
-  - Thêm `likesCount: number` - Số lượt thích
-  - Thêm `savesCount: number` - Số lượt lưu
-
-#### API Routes
-Thêm các endpoints mới trong `backend/src/routes/users.ts`:
-
-1. **POST `/api/users/like-recipe`** - Like/Unlike recipe
-   ```typescript
-   Body: { recipeId: string }
-   Headers: Authorization: Bearer <token>
-   Response: { success, isLiked, likesCount, likedRecipes }
-   ```
-
-2. **POST `/api/users/save-recipe`** - Save/Unsave recipe
-   ```typescript
-   Body: { recipeId: string }
-   Headers: Authorization: Bearer <token>
-   Response: { success, isSaved, savesCount, savedRecipes }
-   ```
-
-3. **GET `/api/users/liked-recipes`** - Lấy danh sách recipes đã thích
-   ```typescript
-   Headers: Authorization: Bearer <token>
-   Response: { success, recipes: Recipe[] }
-   ```
-
-4. **GET `/api/users/saved-recipes`** - Lấy danh sách recipes đã lưu
-   ```typescript
-   Headers: Authorization: Bearer <token>
-   Response: { success, recipes: Recipe[] }
-   ```
-
-### 2. Frontend API Routes (Next.js)
+## API Routes (Next.js)
 
 Các API routes trong `app/api/user/` sử dụng MongoDB trực tiếp:
-- `like-recipe/route.ts` - Like/Unlike recipe trực tiếp với MongoDB
-- `save-recipe/route.ts` - Save/Unsave recipe trực tiếp với MongoDB
-- `liked-recipes/route.ts` - Lấy danh sách recipes đã thích
-- `saved-recipes/route.ts` - Lấy danh sách recipes đã lưu
 
-#### Components
+| Route | Method | Mô tả |
+|-------|--------|-------|
+| `/api/user/like-recipe` | POST | Like/Unlike recipe |
+| `/api/user/save-recipe` | POST | Save/Unsave recipe |
+| `/api/user/liked-recipes` | GET | Lấy danh sách recipes đã thích |
+| `/api/user/saved-recipes` | GET | Lấy danh sách recipes đã lưu |
 
-**Recipe Card** (`client/components/recipe/recipe-card.tsx`):
-- Thêm nút Like với icon trái tim ❤️
-- Thêm nút Save với icon bookmark 🔖
+### Request/Response Format
+
+**Like Recipe:**
+```typescript
+// Request
+POST /api/user/like-recipe
+Headers: { Authorization: "Bearer <token>" }
+Body: { recipeId: string }
+
+// Response
+{
+  success: true,
+  isLiked: boolean,
+  likesCount: number,
+  likedRecipes: string[]
+}
+```
+
+**Save Recipe:**
+```typescript
+// Request
+POST /api/user/save-recipe
+Headers: { Authorization: "Bearer <token>" }
+Body: { recipeId: string }
+
+// Response
+{
+  success: true,
+  isSaved: boolean,
+  savesCount: number,
+  savedRecipes: string[]
+}
+```
+
+## Components
+
+### Recipe Card (`app/components/recipe/recipe-card.tsx`)
+- Nút Like với icon trái tim ❤️
+- Nút Save với icon bookmark 🔖
 - Hiển thị số lượt like và save
 - Animation khi click (fill color)
 - Toast notifications khi like/save thành công
+- Sử dụng `getToken()` từ auth-store
 
-**Profile Page** (`app/profile/page.tsx`):
-- Thêm Tabs để phân loại:
-  - Tab "Đã đăng" - Recipes user đã tạo
-  - Tab "Đã lưu" 🔖 - Recipes đã save
-  - Tab "Đã thích" ❤️ - Recipes đã like
-- Hiển thị recipes dạng grid với RecipeCard
-- Click vào recipe để xem chi tiết
+### Recipe Detail Dialog (`app/components/recipe/recipe-detail-dialog.tsx`)
+- Like/Save buttons trong dialog
+- Real-time count updates
+- Gọi `onLikeSaveChange` callback để notify parent
+- Separate useEffect để sync counts từ parent
 
-#### Types & Store
-- **types.ts**: Thêm `likesCount`, `savesCount` vào Recipe interface
-- **types.ts**: Thêm `savedRecipes`, `likedRecipes` vào User interface  
-- **auth-store.ts**: Thêm savedRecipes và likedRecipes vào User interface
-- **auth-store.ts**: Lưu và xóa token từ localStorage
+### Recipe Browser (`app/components/recipe/recipe-browser.tsx`)
+- `handleLikeSaveChange` callback để update recipes trong store
+- `likeSaveRefreshKey` để force re-render cards
+- Pass `onLikeSaveChange` prop vào RecipeDetailDialog
 
-### 3. Sample Data Script
+### AI Recommendations (`app/components/ai-recommendations.tsx`)
+- `handleLikeSaveChange` callback để update recommendations state
+- Real-time sync với RecipeDetailDialog
 
-**File**: `backend/scripts/add-likes-saves-data.js`
+### Profile Page (`app/profile/page.tsx`)
+- Tab "Đã lưu" 🔖 - Recipes đã save
+- Tab "Đã thích" ❤️ - Recipes đã like
+- `handleLikeSaveChange` callback để update local state
 
-Script để thêm dữ liệu mẫu:
-- Thêm likesCount (5-54) và savesCount (3-32) cho mỗi recipe
-- Thêm 3-8 liked recipes cho mỗi user
-- Thêm 2-5 saved recipes cho mỗi user
+## Auth Store (`app/lib/auth-store.ts`)
 
-**Cách chạy:**
-```bash
-cd backend
-node scripts/add-likes-saves-data.js
+### New Fields
+```typescript
+interface AuthStore {
+  token: string | null           // JWT token (persisted)
+  getToken: () => string | null  // Get token from store or localStorage
+}
 ```
 
-## Hướng dẫn sử dụng
+### Token Flow
+1. User login → token saved to store + localStorage
+2. API calls → `getToken()` returns token from store
+3. User logout → token cleared from store + localStorage
 
-### 1. Setup Database
-Chạy script để thêm dữ liệu mẫu:
-```bash
-cd backend
-node scripts/add-likes-saves-data.js
-```
+## Database Schema
 
-### 2. Khởi động Backend
-```bash
-cd backend
-npm run dev
-# hoặc
-pnpm dev
-```
-
-### 3. Khởi động Frontend
-```bash
-# Từ thư mục gốc
-npm run dev
-# hoặc
-pnpm dev
-```
-
-### 4. Sử dụng chức năng
-
-#### Trong Recipe Browser:
-1. Mỗi recipe card hiện có 2 nút:
-   - ❤️ **Like button** - Click để thích/bỏ thích
-   - 🔖 **Save button** - Click để lưu/bỏ lưu
-2. Số lượt like/save hiển thị bên cạnh mỗi icon
-3. Icon sẽ được fill màu khi đã like/save
-
-#### Trong Profile Page:
-1. Vào trang Profile (`/profile`)
-2. Xem 3 tabs:
-   - **Đã đăng**: Recipes bạn đã tạo (với status)
-   - **Đã lưu** 🔖: Recipes đã save
-   - **Đã thích** ❤️: Recipes đã like
-3. Click vào recipe card để xem chi tiết
-
-## Technical Details
-
-### Authentication Flow
-1. User login → Nhận JWT token
-2. Token được lưu vào localStorage
-3. Mỗi request like/save gửi token trong body
-4. Next.js API route forward request với token trong header
-5. Backend middleware xác thực token
-6. Update database và return kết quả
-
-### State Management
-- Auth store lưu user info (bao gồm savedRecipes, likedRecipes arrays)
-- Recipe card có local state cho isLiked, isSaved
-- Khi like/save, cập nhật cả local state và auth store
-- Profile page fetch data mỗi khi load
-
-### Database Schema
 ```typescript
 User {
   savedRecipes: ObjectId[]  // Array of Recipe IDs
@@ -169,22 +129,33 @@ Recipe {
 ## Troubleshooting
 
 ### Lỗi 401 Unauthorized
-- Kiểm tra đã đăng nhập chưa
-- Kiểm tra token trong localStorage: `localStorage.getItem('token')`
-- Thử đăng xuất và đăng nhập lại
+- ✅ **Fixed:** Token giờ được lưu trong Zustand store
+- Nếu vẫn lỗi: đăng xuất và đăng nhập lại
+- Check token: `useAuthStore.getState().token`
 
-### Không thấy số likes/saves
-- Chạy lại script add-likes-saves-data.js
-- Kiểm tra backend đã chạy chưa
-- Check console log xem có lỗi API không
+### Số likes/saves không cập nhật real-time
+- ✅ **Fixed:** Added `onLikeSaveChange` callbacks
+- ✅ **Fixed:** Split useEffect để sync counts từ parent
+- Refresh page nếu cần (F5)
 
 ### Tabs không hiển thị recipes
 - Kiểm tra đã có recipes đã like/save chưa
 - Check Network tab xem API có trả về data không
-- Kiểm tra token có được gửi đúng không
+- Verify token được gửi đúng trong header
+
+## Files Modified (2025-12-27)
+
+| File | Changes |
+|------|---------|
+| `app/lib/auth-store.ts` | Added `token` field, `getToken()` function |
+| `app/components/recipe/recipe-detail-dialog.tsx` | Use `getToken()`, split useEffect, add `onLikeSaveChange` calls |
+| `app/components/recipe/recipe-card.tsx` | Use `getToken()` instead of localStorage |
+| `app/components/recipe/recipe-browser.tsx` | Added `handleLikeSaveChange`, `likeSaveRefreshKey` |
+| `app/components/ai-recommendations.tsx` | Added `handleLikeSaveChange` |
+| `app/profile/page.tsx` | Added `handleLikeSaveChange` |
 
 ## Future Enhancements
-- [ ] Real-time updates khi có người khác like/save
+- [ ] Real-time updates khi có người khác like/save (WebSocket)
 - [ ] Thông báo khi recipe được like nhiều
 - [ ] Filter/Sort recipes trong tabs
 - [ ] Export saved recipes

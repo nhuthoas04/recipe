@@ -4,10 +4,9 @@
 
 ```
 recipe/
-├── app/                  # 📱 Next.js App Router (Pages & API Routes)
-├── client/               # 💻 Frontend Code (Components, Libs, Styles)
-├── backend/              # ⚙️ Express.js Backend API
-├── scripts/              # 🛠️ Setup scripts
+├── app/                  # 📱 Next.js App (Pages, API, Components, Lib)
+├── backend/              # ⚙️ Express.js Backend API (Optional)
+├── public/               # 🖼️ Static assets
 ├── node_modules/         # 📦 Dependencies
 └── [config files]        # ⚙️ Config files
 ```
@@ -35,14 +34,14 @@ recipe/
 - `/api/shopping-list/*` - Generate shopping list
 - `/api/users/*` - User management + health profile
 - `/api/user/profile/*` - Current user profile
+- `/api/user/like-recipe/*` - Like/Unlike recipe
+- `/api/user/save-recipe/*` - Save/Unsave recipe
+- `/api/user/liked-recipes/*` - Get liked recipes
+- `/api/user/saved-recipes/*` - Get saved recipes
 - `/api/admin/users/*` - Admin user management
 - `/api/ai/recommendations/*` - AI meal recommendations
 
----
-
-## 💻 **client/** - Frontend Code
-
-### **components/** - React Components (chia theo feature)
+### Components (`app/components/`):
 
 #### `auth/` - Authentication
 - `auth-guard.tsx` - Protected route wrapper
@@ -51,8 +50,8 @@ recipe/
 
 #### `recipe/` - Recipe Management
 - `recipe-browser.tsx` - Browse & filter recipes
-- `recipe-card.tsx` - Recipe card display
-- `recipe-detail-dialog.tsx` - Recipe details + comments
+- `recipe-card.tsx` - Recipe card with like/save buttons
+- `recipe-detail-dialog.tsx` - Recipe details + comments + like/save
 - `recipe-form-dialog.tsx` - Create/edit recipe form
 
 #### `meal/` - Meal Planning
@@ -65,32 +64,34 @@ recipe/
 
 #### `layout/` - Layout Components
 - `header.tsx` - Navigation header
+- `footer.tsx` - Footer
 - `theme-provider.tsx` - Dark/Light mode
 
 #### `shared/` - Shared Utilities
 - `client-only.tsx` - Client-side only wrapper
 
-#### `ui/` - shadcn/ui Components (12 files)
-- button, card, dialog, input, checkbox, etc.
+#### `ui/` - shadcn/ui Components
+- button, card, dialog, input, checkbox, tabs, badge, etc.
 
-### **lib/** - Utilities & Logic
+#### Standalone Components
+- `ai-recommendations.tsx` - AI gợi ý món ăn theo sức khỏe
+- `health-profile-dialog.tsx` - Health profile setup dialog
 
-- `auth-store.ts` - Zustand auth state management
+### Libraries (`app/lib/`):
+
+- `auth-store.ts` - Zustand auth state (user, token, login, logout, getToken)
 - `recipe-store.ts` - Zustand recipe state management
 - `types.ts` - TypeScript type definitions
-- `utils.ts` - Helper functions
+- `utils.ts` - Helper functions (cn, etc.)
 - `mongodb.ts` - MongoDB connection
 - `recipes-data.ts` - Default recipe data
 - `auth.ts` - Auth utilities
 
-### **styles/** - Styles
-- `globals.css` - Global CSS styles
-
 ---
 
-## ⚙️ **backend/** - Express.js Backend
+## ⚙️ **backend/** - Express.js Backend (Optional)
 
-**Trạng thái:** RESTful API đầy đủ chức năng, được sử dụng song song với Next.js API Routes
+**Trạng thái:** RESTful API - hầu hết chức năng đã migrate sang Next.js API Routes
 
 ```
 backend/
@@ -119,20 +120,17 @@ backend/
 ├── docs/                      # 9 documentation files
 ├── docker-compose.yml         # Docker setup
 ├── Dockerfile
-├── mongo-init.js
-└── setup-mongodb-user.js
+└── mongo-init.js
 ```
 
-**Xem chi tiết:** [backend/README.md](backend/README.md) và [backend/STRUCTURE.md](backend/STRUCTURE.md)
-
-Xem chi tiết: [backend/STRUCTURE.md](backend/STRUCTURE.md)
+**Xem chi tiết:** [backend/STRUCTURE.md](backend/STRUCTURE.md)
 
 ---
 
 ## 📝 **Config Files**
 
 - `package.json` - Dependencies & scripts
-- `tsconfig.json` - TypeScript config (`@/*` → `./client/*`)
+- `tsconfig.json` - TypeScript config (`@/*` → `./app/*`)
 - `next.config.mjs` - Next.js config
 - `components.json` - shadcn/ui config
 - `postcss.config.mjs` - PostCSS config
@@ -151,8 +149,8 @@ import { Recipe } from "@/lib/types"
 ```
 
 Mapping:
-- `@/components/*` → `client/components/*`
-- `@/lib/*` → `client/lib/*`
+- `@/components/*` → `app/components/*`
+- `@/lib/*` → `app/lib/*`
 
 ---
 
@@ -160,13 +158,15 @@ Mapping:
 
 ```bash
 # Development
-npm run dev              # Start Next.js frontend
-npm run dev:backend      # Start Express backend
-npm run dev:frontend     # Start Next.js frontend
+pnpm dev                 # Start Next.js frontend (http://localhost:3001)
+
+# Backend (Optional)
+cd backend
+npm run dev              # Start Express backend (http://localhost:5000)
 
 # Build
-npm run build            # Build for production
-npm run start            # Start production server
+pnpm build               # Build for production
+pnpm start               # Start production server
 ```
 
 ---
@@ -174,16 +174,16 @@ npm run start            # Start production server
 ## 📊 Tech Stack
 
 ### Frontend:
-- **Framework:** Next.js 15.2.4 (App Router)
+- **Framework:** Next.js 15 (App Router)
 - **React:** 19
 - **TypeScript:** 5
-- **Styling:** Tailwind CSS 4.1.9
+- **Styling:** Tailwind CSS
 - **UI Components:** shadcn/ui (Radix UI)
-- **State Management:** Zustand
-- **Database:** MongoDB 6.20.0
+- **State Management:** Zustand (persisted)
+- **Database:** MongoDB
 - **Auth:** JWT + bcryptjs
 
-### Backend:
+### Backend (Optional):
 - **Framework:** Express.js
 - **Language:** TypeScript
 - **Database:** MongoDB with Mongoose
@@ -193,8 +193,19 @@ npm run start            # Start production server
 
 ## 📖 Ghi chú
 
-1. **App Router ở root:** Next.js yêu cầu thư mục `app` ở root hoặc `src`
-2. **Client folder:** Chứa tất cả frontend code (components, libs)
-3. **Backend folder:** Express.js API server chạy trên port 5000
-4. **API Routes:** Sử dụng Next.js API Routes (trong `app/api`) cho most operations
-5. **Docker:** Hỗ trợ deployment với docker-compose
+1. **App-based structure:** Tất cả code frontend nằm trong `app/` folder
+2. **Import alias:** `@/*` → `app/*`
+3. **Backend optional:** Hầu hết API đã migrate sang Next.js API Routes
+4. **Token storage:** JWT token được lưu trong Zustand store (persisted)
+5. **Real-time updates:** Like/Save counts update ngay lập tức
+6. **Docker:** Hỗ trợ deployment với docker-compose
+
+---
+
+## 🔄 Recent Updates
+
+### 2025-12-27: Like/Save Real-time Updates
+- Token được lưu trong Zustand store thay vì chỉ localStorage
+- `getToken()` function để lấy token
+- `onLikeSaveChange` callbacks để update UI real-time
+- Split useEffect cho better state sync

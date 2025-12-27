@@ -21,12 +21,14 @@ export interface User {
 interface AuthStore {
   user: User | null
   isAuthenticated: boolean
-  
+  token: string | null
+
   // Actions
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   updateUser: (user: User) => void
+  getToken: () => string | null
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -34,6 +36,7 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
+      token: null,
 
       login: async (email: string, password: string) => {
         // Validate input
@@ -55,15 +58,16 @@ export const useAuthStore = create<AuthStore>()(
             return { success: false, error: data.error }
           }
 
-          // Save token to localStorage
+          // Save token to both localStorage and store
           if (data.token) {
             localStorage.setItem('token', data.token)
           }
 
-          // Set user
+          // Set user and token
           set({
             user: data.user,
             isAuthenticated: true,
+            token: data.token || null,
           })
 
           return { success: true }
@@ -120,16 +124,23 @@ export const useAuthStore = create<AuthStore>()(
       logout: () => {
         // Remove token from localStorage
         localStorage.removeItem('token')
-        
+
         set({
           user: null,
           isAuthenticated: false,
+          token: null,
         })
         // Dữ liệu sẽ được load lại tự động bởi UserDataSync component
       },
 
       updateUser: (user: User) => {
         set({ user })
+      },
+
+      getToken: () => {
+        // Return token from store or fallback to localStorage
+        const state = get()
+        return state.token || localStorage.getItem('token')
       },
     }),
     {

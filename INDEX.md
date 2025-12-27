@@ -4,9 +4,8 @@
 
 ```
 recipe/
-├── app/           # 📱 Next.js Pages & API Routes
-├── client/        # 💻 Frontend Components & Logic
-├── backend/       # ⚙️ Express.js Backend API
+├── app/           # 📱 Next.js App (Pages, API Routes, Components, Lib)
+├── backend/       # ⚙️ Express.js Backend API (Optional)
 ├── .next/         # 🔨 Build output (auto-generated)
 └── node_modules/  # 📦 Dependencies (auto-generated)
 ```
@@ -21,9 +20,9 @@ recipe/
 pnpm install
 
 # Chạy frontend
-pnpm dev              # http://localhost:3000
+pnpm dev              # http://localhost:3001
 
-# Chạy backend (tùy chọn)
+# Chạy backend (tùy chọn - không bắt buộc)
 cd backend
 npm install
 npm run dev           # http://localhost:5000
@@ -38,7 +37,7 @@ npm run dev           # http://localhost:5000
 
 ## 📱 **app/** - Next.js App Router
 
-**Mục đích:** Pages và API Routes
+**Mục đích:** Pages, API Routes, Components, và Libraries
 
 ### **Pages:**
 ```
@@ -65,78 +64,72 @@ app/api/
 │   ├── route.ts       # GET, POST - CRUD recipes
 │   ├── restore/       # POST - Khôi phục recipe đã xóa
 │   └── review/        # POST - Duyệt/từ chối recipe (admin)
-├── comments/          # POST, DELETE - CRUD comments
+├── comments/          # GET, POST, DELETE, PATCH - CRUD comments
 ├── meal-plans/        # GET, POST - CRUD meal plans
 ├── shopping-list/     # GET, POST - Tạo shopping list
 ├── users/
 │   ├── route.ts       # GET - Danh sách users (admin)
 │   └── health-profile/ # GET, POST - Health profile
 ├── user/
-│   └── profile/       # GET, PUT - User profile
+│   ├── profile/       # GET, PUT - User profile
+│   ├── like-recipe/   # POST - Like/Unlike recipe
+│   ├── save-recipe/   # POST - Save/Unsave recipe
+│   ├── liked-recipes/ # GET - Get liked recipes
+│   └── saved-recipes/ # GET - Get saved recipes
 ├── admin/
 │   └── users/         # PATCH, DELETE - Quản lý users
 └── ai/
     └── recommendations/ # POST - AI gợi ý món ăn
 ```
 
-**📖 Xem thêm:** Không có file riêng (Next.js convention)
+### **Components:**
+```
+app/components/
+├── auth/                       # Authentication
+│   ├── auth-guard.tsx         # Protected routes
+│   ├── user-data-sync.tsx     # Sync user data
+│   └── cleanup-localstorage.tsx
+├── recipe/                     # Recipe Management
+│   ├── recipe-browser.tsx     # Browse & filter recipes
+│   ├── recipe-card.tsx        # Recipe card with like/save
+│   ├── recipe-detail-dialog.tsx # Chi tiết recipe + comments
+│   └── recipe-form-dialog.tsx # Form đóng góp recipe
+├── meal/                       # Meal Planning
+│   ├── meal-planner.tsx
+│   ├── meal-slot.tsx
+│   └── add-meal-dialog.tsx
+├── shopping/                   # Shopping List
+│   └── shopping-list.tsx
+├── layout/                     # Layout
+│   ├── header.tsx
+│   ├── footer.tsx
+│   └── theme-provider.tsx
+├── shared/                     # Shared
+│   └── client-only.tsx
+├── ui/                         # shadcn/ui components
+├── health-profile-dialog.tsx
+└── ai-recommendations.tsx      # AI gợi ý món ăn theo sức khỏe
+```
+
+### **Libraries:**
+```
+app/lib/
+├── auth-store.ts      # Zustand auth store (user, token, login/logout)
+├── recipe-store.ts    # Zustand recipe store (recipes, filters)
+├── auth.ts            # Auth utilities
+├── api-client.ts      # API client
+├── types.ts           # TypeScript types
+├── utils.ts           # Helper functions (cn, etc.)
+├── mongodb.ts         # MongoDB client
+└── recipes-data.ts    # Default recipes data
+```
 
 ---
 
-## 💻 **client/** - Frontend Code
-
-**Mục đích:** Components, Libraries, Styles
-
-### **Cấu trúc:**
-```
-client/
-├── components/              # React Components
-│   ├── auth/               # Authentication
-│   │   ├── auth-guard.tsx         # Protected routes
-│   │   ├── user-data-sync.tsx     # Sync user data
-│   │   └── cleanup-localstorage.tsx
-│   ├── recipe/             # Recipe Management
-│   │   ├── recipe-browser.tsx     # Browse & filter
-│   │   ├── recipe-card.tsx        # Recipe card
-│   │   ├── recipe-detail-dialog.tsx
-│   │   └── recipe-form-dialog.tsx
-│   ├── meal/               # Meal Planning
-│   │   ├── meal-planner.tsx
-│   │   ├── meal-slot.tsx
-│   │   └── add-meal-dialog.tsx
-│   ├── shopping/           # Shopping List
-│   │   └── shopping-list.tsx
-│   ├── layout/             # Layout
-│   │   ├── header.tsx
-│   │   ├── footer.tsx
-│   │   └── theme-provider.tsx
-│   ├── shared/             # Shared
-│   │   └── client-only.tsx
-│   ├── ui/                 # shadcn/ui (12 components)
-│   ├── health-profile-dialog.tsx
-│   └── ai-recommendations.tsx
-│
-├── lib/                    # Utilities & Stores
-│   ├── auth-store.ts      # Zustand auth store
-│   ├── recipe-store.ts    # Zustand recipe store
-│   ├── auth.ts            # Auth utilities
-│   ├── api-client.ts      # API client
-│   ├── types.ts           # TypeScript types
-│   ├── utils.ts           # Helper functions
-│   ├── mongodb.ts         # MongoDB client
-│   └── recipes-data.ts    # Default recipes
-│
-└── styles/                 # CSS
-    └── globals.css
-```
-
-**📖 Xem thêm:** [client/README.md](client/README.md)
-
----
-
-## ⚙️ **backend/** - Express.js Backend
+## ⚙️ **backend/** - Express.js Backend (Optional)
 
 **Mục đích:** RESTful API Server chạy trên port 5000
+> **Note:** Hầu hết API đã được migrate sang Next.js API Routes, backend chỉ cần cho một số tính năng đặc biệt.
 
 ### **Cấu trúc:**
 ```
@@ -160,40 +153,44 @@ backend/
 ## 🔍 Tìm file theo chức năng
 
 ### **🔐 Authentication:**
-- **Frontend:** `client/components/auth/*`
-- **Store:** `client/lib/auth-store.ts`
+- **Components:** `app/components/auth/*`
+- **Store:** `app/lib/auth-store.ts` (token, user, login, logout, getToken)
 - **API:** `app/api/auth/*`
-- **Backend:** `backend/src/routes/auth.ts`
 
 ### **🍽️ Recipes:**
-- **Frontend:** `client/components/recipe/*`
-- **Store:** `client/lib/recipe-store.ts`
+- **Components:** `app/components/recipe/*`
+- **Store:** `app/lib/recipe-store.ts`
 - **API:** `app/api/recipes/*`
-- **Backend:** `backend/src/routes/recipes.ts` (chưa dùng)
 
-### **🗓️ Meal Planning:**
-- **Frontend:** `client/components/meal/*`
-- **Store:** `client/lib/recipe-store.ts`
-- **API:** `app/api/meal-plans/*`
-- **Backend:** `backend/src/routes/mealPlans.ts` (chưa dùng)
-
-### **🛒 Shopping List:**
-- **Frontend:** `client/components/shopping/*`
-- **Store:** `client/lib/recipe-store.ts`
-- **API:** `app/api/shopping-list/*`
+### **❤️ Like/Save:**
+- **Components:** `app/components/recipe/recipe-card.tsx`, `recipe-detail-dialog.tsx`
+- **Store:** `app/lib/auth-store.ts` (likedRecipes, savedRecipes)
+- **API:** `app/api/user/like-recipe/*`, `app/api/user/save-recipe/*`
 
 ### **💬 Comments:**
-- **Frontend:** `client/components/recipe/recipe-detail-dialog.tsx`
+- **Component:** `app/components/recipe/recipe-detail-dialog.tsx`
 - **API:** `app/api/comments/*`
 
+### **🤖 AI Recommendations:**
+- **Component:** `app/components/ai-recommendations.tsx`
+- **API:** `app/api/ai/recommendations/*`
+
+### **�️ Meal Planning:**
+- **Components:** `app/components/meal/*`
+- **Store:** `app/lib/recipe-store.ts`
+- **API:** `app/api/meal-plans/*`
+
+### **� Shopping List:**
+- **Components:** `app/components/shopping/*`
+- **API:** `app/api/shopping-list/*`
+
 ### **🎨 UI Components:**
-- **shadcn/ui:** `client/components/ui/*`
-- **Layout:** `client/components/layout/*`
+- **shadcn/ui:** `app/components/ui/*`
+- **Layout:** `app/components/layout/*`
 
 ### **📊 Database:**
-- **MongoDB Connection:** `client/lib/mongodb.ts`
-- **Types:** `client/lib/types.ts`
-- **Scripts:** `backend/scripts/*`
+- **MongoDB Connection:** `app/lib/mongodb.ts`
+- **Types:** `app/lib/types.ts`
 
 ---
 
@@ -201,13 +198,12 @@ backend/
 
 | File | Mục đích |
 |------|----------|
-| `package.json` | Frontend dependencies & scripts |
-| `tsconfig.json` | TypeScript config (`@/*` → `client/*`) |
+| `package.json` | Dependencies & scripts |
+| `tsconfig.json` | TypeScript config (`@/*` → `app/*`) |
 | `next.config.mjs` | Next.js config |
 | `components.json` | shadcn/ui config |
 | `.env.local` | Environment variables |
 | `backend/package.json` | Backend dependencies |
-| `backend/tsconfig.json` | Backend TypeScript config |
 
 ---
 
@@ -222,22 +218,19 @@ backend/
 - **backend/STRUCTURE.md** - Backend structure
 - **backend/docs/** - 9 documentation files
 
-### **Client:**
-- **client/README.md** - Client folder guide
-
 ---
 
 ## 🎯 Quy trình làm việc
 
 ### **1. Thêm tính năng mới:**
-1. Tạo component trong `client/components/[feature]/`
-2. Thêm logic vào `client/lib/` (stores, utils)
+1. Tạo component trong `app/components/[feature]/`
+2. Thêm logic vào `app/lib/` (stores, utils)
 3. Tạo API route trong `app/api/[feature]/`
 4. Thêm page trong `app/[feature]/page.tsx`
 
 ### **2. Thêm UI component:**
 1. Dùng shadcn/ui: `npx shadcn-ui@latest add [component]`
-2. Component sẽ tự động vào `client/components/ui/`
+2. Component sẽ tự động vào `app/components/ui/`
 
 ### **3. Thêm API endpoint:**
 1. Tạo file trong `app/api/[route]/route.ts`
@@ -263,12 +256,27 @@ backend/
 
 ```
 ✅ Frontend: Next.js 15 + React 19 + TypeScript
-✅ State: Zustand stores
+✅ State: Zustand stores (auth-store, recipe-store)
 ✅ UI: shadcn/ui + Tailwind CSS
 ✅ Database: MongoDB Atlas (Cloud)
-✅ API: Next.js API Routes + Express.js Backend
-✅ Auth: JWT + bcryptjs
+✅ API: Next.js API Routes (chính) + Express.js Backend (tùy chọn)
+✅ Auth: JWT + bcryptjs (token stored in Zustand)
 ✅ Docker: docker-compose deployment
 ```
 
-**Import paths:** `@/*` → `client/*`
+**Import paths:** `@/*` → `app/*`
+
+---
+
+## 🔄 Recent Updates
+
+### Like/Save Real-time Updates (2025-12-27)
+- ✅ Token được lưu trong Zustand store (persisted)
+- ✅ Like/Save counts cập nhật real-time trong dialog và cards
+- ✅ `getToken()` function để lấy token từ store
+
+### Files quan trọng đã cập nhật:
+- `app/lib/auth-store.ts` - Token management
+- `app/components/recipe/recipe-detail-dialog.tsx` - Real-time updates
+- `app/components/recipe/recipe-browser.tsx` - onLikeSaveChange handler
+- `app/components/ai-recommendations.tsx` - onLikeSaveChange handler

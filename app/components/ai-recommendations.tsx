@@ -65,6 +65,32 @@ export function AIRecommendations({ userId, age, healthConditions, dietaryPrefer
     loadRecommendations()
   }, [])
 
+  // Update comment count for a specific recipe in recommendations (delta: +1 for add, -1 for delete)
+  const handleCommentChange = useCallback((delta: number = 1) => {
+    if (selectedRecipe?.id) {
+      setRecommendations(prev => 
+        prev.map(recipe => 
+          recipe.id === selectedRecipe.id 
+            ? { ...recipe, commentsCount: Math.max(0, (recipe.commentsCount || 0) + delta) }
+            : recipe
+        )
+      )
+    }
+  }, [selectedRecipe?.id])
+
+  // Update like/save counts for a specific recipe
+  const handleLikeSaveChange = useCallback((recipeId: string, field: 'likesCount' | 'savesCount', newValue: number) => {
+    console.log('[AI Recommendations] handleLikeSaveChange called:', { recipeId, field, newValue })
+    setRecommendations(prev => {
+      console.log('[AI Recommendations] Current recommendations IDs:', prev.map(r => r.id))
+      return prev.map(recipe => 
+        recipe.id === recipeId 
+          ? { ...recipe, [field]: newValue }
+          : recipe
+      )
+    })
+  }, [])
+
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({ left: -400, behavior: 'smooth' })
@@ -261,7 +287,9 @@ export function AIRecommendations({ userId, age, healthConditions, dietaryPrefer
       
       <RecipeDetailDialog 
         recipe={selectedRecipe} 
-        onClose={() => setSelectedRecipe(null)} 
+        onClose={() => setSelectedRecipe(null)}
+        onCommentChange={handleCommentChange}
+        onLikeSaveChange={handleLikeSaveChange}
       />
     </div>
   )

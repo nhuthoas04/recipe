@@ -5,18 +5,19 @@
 Recipe App là một ứng dụng web toàn diện cho phép người dùng:
 - 🔍 Tìm kiếm và duyệt công thức nấu ăn
 - 📝 Tạo và chia sẻ công thức của riêng mình
+- ❤️ Thích và lưu công thức yêu thích
 - 📅 Lập kế hoạch bữa ăn hàng tuần
 - 🛒 Tạo danh sách mua sắm tự động
 - 💬 Bình luận và đánh giá công thức
 - 👤 Quản lý hồ sơ sức khỏe cá nhân
-- 🤖 Nhận gợi ý món ăn từ AI
+- 🤖 Nhận gợi ý món ăn từ AI theo tình trạng sức khỏe
 
 ## 🏗️ Kiến trúc
 
-- **Frontend:** Next.js 15 (App Router) + React + TypeScript
-- **Backend:** Express.js + TypeScript (RESTful API)
+- **Frontend:** Next.js 15 (App Router) + React 19 + TypeScript
+- **Backend:** Express.js + TypeScript (RESTful API - Optional)
 - **Database:** MongoDB Atlas (Cloud)
-- **Authentication:** JWT + HttpOnly Cookies
+- **Authentication:** JWT + Zustand (persisted token)
 - **UI Components:** shadcn/ui + Tailwind CSS
 - **State Management:** Zustand
 - **Deployment:** Docker + Docker Compose
@@ -31,16 +32,15 @@ git clone https://github.com/nhuthoas04/recipe.git
 cd recipe
 
 # Cấu hình MongoDB Atlas connection trong:
-# - backend/.env
-# - docker-compose.yml
 # - .env.local
+# - backend/.env (optional)
 
 # Build và chạy
 docker-compose up -d --build
 
 # Truy cập:
-# - Frontend: http://localhost:3000
-# - Backend: http://localhost:5000
+# - Frontend: http://localhost:3001
+# - Backend: http://localhost:5000 (optional)
 ```
 
 📖 Chi tiết: [DOCKER.md](DOCKER.md)
@@ -55,59 +55,38 @@ cd recipe
 
 #### 2. Cài đặt dependencies
 
-**Frontend:**
 ```bash
+# Frontend (chỉ cần này)
 pnpm install
-```
 
-**Backend:**
-```bash
+# Backend (tùy chọn - không bắt buộc)
 cd backend
 npm install
 ```
 
 #### 3. Cấu hình MongoDB
 
-**Tùy chọn A: MongoDB Atlas (Cloud - Khuyến nghị)**
+**MongoDB Atlas (Cloud - Khuyến nghị)**
 - Xem hướng dẫn chi tiết: [backend/docs/MONGODB_ATLAS_SETUP.md](backend/docs/MONGODB_ATLAS_SETUP.md)
 - Tạo cluster miễn phí tại: https://www.mongodb.com/cloud/atlas/register
-
-**Tùy chọn B: MongoDB Local**
-```bash
-cd backend
-docker-compose up -d
-```
 
 #### 4. Cấu hình môi trường
 
 **Frontend (.env.local):**
 ```env
-NEXT_PUBLIC_MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/goiymonan
 JWT_SECRET=your-random-secret-key-min-32-chars
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
-**Backend (.env):**
-```env
-PORT=5000
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
-JWT_SECRET=same-as-frontend-secret
-NODE_ENV=development
-FRONTEND_URL=http://localhost:3000
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 #### 5. Chạy ứng dụng
 
 **Development:**
 ```bash
-# Terminal 1 - Frontend
-pnpm dev              # http://localhost:3000
+# Frontend (chỉ cần này)
+pnpm dev              # http://localhost:3001
 
-# Terminal 2 - Backend (tùy chọn - nếu muốn dùng Express backend)
+# Backend (tùy chọn)
 cd backend
 npm run dev           # http://localhost:5000
 ```
@@ -122,9 +101,12 @@ pnpm start
 
 ```
 recipe/
-├── app/              # 📱 Next.js App Router (Pages & API Routes)
-├── client/           # 💻 Frontend Components & Libraries
-├── backend/          # ⚙️ Express.js Backend API
+├── app/              # 📱 Next.js App (Pages, API Routes, Components, Lib)
+│   ├── components/   # React Components
+│   ├── lib/          # Utilities & Stores
+│   ├── api/          # API Routes
+│   └── [pages]/      # Page components
+├── backend/          # ⚙️ Express.js Backend API (Optional)
 ├── public/           # 🖼️ Static assets
 └── [config files]    # ⚙️ Configuration files
 ```
@@ -135,10 +117,11 @@ Xem chi tiết:
 
 ## 📚 Documentation
 
-### Frontend
-- [client/README.md](client/README.md) - Frontend structure
+### Project
+- [INDEX.md](INDEX.md) - Navigation guide
+- [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Project structure
 
-### Backend
+### Backend (Optional)
 - [backend/README.md](backend/README.md) - Backend API documentation
 - [backend/STRUCTURE.md](backend/STRUCTURE.md) - Backend structure
 - [backend/docs/](backend/docs/) - Detailed documentation
@@ -151,6 +134,8 @@ cd backend
 node scripts/create-admin.js
 ```
 
+Hoặc đăng ký tài khoản với email: `admin@recipe.com`
+
 ## 🛠️ Công nghệ sử dụng
 
 ### Frontend
@@ -162,8 +147,9 @@ node scripts/create-admin.js
 - Zustand (State management)
 - React Hook Form
 - date-fns
+- react-hot-toast
 
-### Backend
+### Backend (Optional)
 - Express.js
 - TypeScript
 - MongoDB + Mongoose
@@ -177,13 +163,15 @@ node scripts/create-admin.js
 - Authentication (Login/Register/Logout)
 - Recipe CRUD operations
 - Recipe search & filter
+- ❤️ Like/Unlike recipes (real-time update)
+- 🔖 Save/Unsave recipes (real-time update)
+- 💬 Comments với reply & delete
 - Meal planning
 - Shopping list generation
-- Comments & ratings
 - User profiles
 - Admin dashboard
 - Health profile
-- AI recommendations
+- 🤖 AI recommendations theo sức khỏe
 - Forgot/Reset password
 
 🚧 **Đang phát triển:**
@@ -191,6 +179,20 @@ node scripts/create-admin.js
 - Social sharing
 - Nutrition calculator
 - Mobile app
+
+## 🔄 Recent Updates
+
+### v1.1 - Like/Save Real-time Updates (2025-12-27)
+- ✅ Token được lưu trong Zustand store (persisted)
+- ✅ Like/Save counts cập nhật real-time
+- ✅ Sửa lỗi 401 Unauthorized khi like/save
+- ✅ Thêm `getToken()` function
+
+### v1.0 - Initial Release
+- ✅ Full authentication flow
+- ✅ Recipe management
+- ✅ AI recommendations
+- ✅ Meal planning & Shopping list
 
 ## 🤝 Đóng góp
 

@@ -10,9 +10,8 @@
 ### Bước 1: Cấu hình MongoDB Atlas
 
 Cập nhật MongoDB connection string trong:
-- `backend/.env`: `MONGODB_URI`
-- `docker-compose.yml`: `MONGODB_URI` trong environment của backend
-- `.env.local`: `NEXT_PUBLIC_MONGODB_URI`
+- `.env.local`: `MONGODB_URI`
+- `backend/.env`: `MONGODB_URI` (nếu dùng backend)
 
 ### Bước 2: Build và chạy tất cả services
 
@@ -22,16 +21,16 @@ docker-compose up -d --build
 ```
 
 Lệnh này sẽ:
-- ✅ Build và chạy Backend API (port 5000) kết nối MongoDB Atlas
-- ✅ Build và chạy Frontend (port 3000)
+- ✅ Build và chạy Frontend (port 3001)
+- ✅ Build và chạy Backend API (port 5000) - optional
 
-### Bước 2: Kiểm tra services đang chạy
+### Bước 3: Kiểm tra services đang chạy
 
 ```bash
 docker-compose ps
 ```
 
-### Bước 3: Xem logs
+### Bước 4: Xem logs
 
 ```bash
 # Xem tất cả logs
@@ -42,10 +41,10 @@ docker-compose logs -f frontend
 docker-compose logs -f backend
 ```
 
-### Bước 4: Truy cập ứng dụng
+### Bước 5: Truy cập ứng dụng
 
-- 🌐 Frontend: http://localhost:3000
-- 🔧 Backend API: http://localhost:5000
+- 🌐 Frontend: http://localhost:3001
+- 🔧 Backend API: http://localhost:5000 (optional)
 - 🗄️ MongoDB: MongoDB Atlas (cloud)
 
 ### Dừng và xóa containers
@@ -72,24 +71,23 @@ recipe/
 
 ## 🔧 Services
 
-### 1. Backend API (backend)
+### 1. Frontend (frontend)
+- Build từ: ./Dockerfile
+- Port: 3001
+- Env: Production
+- Standalone Next.js build
+- Features:
+  - ✅ External image support (remotePatterns)
+  - ✅ Server-side rendering
+  - ✅ API routes (MongoDB direct)
+  - ✅ Static optimization
+  - ✅ Like/Save real-time updates
+
+### 2. Backend API (backend) - Optional
 - Build từ: ./backend/Dockerfile.backend
 - Port: 5000
 - Env: Production
 - Kết nối: MongoDB Atlas Cloud
-- Image size: ~200MB
-
-### 2. Frontend (frontend)
-- Build từ: ./Dockerfile
-- Port: 3000
-- Env: Production
-- Standalone Next.js build
-- Image size: ~150MB
-- Features:
-  - ✅ External image support (remotePatterns)
-  - ✅ Server-side rendering
-  - ✅ API routes
-  - ✅ Static optimization
 
 ## ⚡ Tips
 
@@ -134,7 +132,7 @@ Khi deploy production, nhớ:
 ### Port đã được sử dụng
 ```bash
 # Windows
-netstat -ano | findstr :3000
+netstat -ano | findstr :3001
 netstat -ano | findstr :5000
 
 # Kill process nếu cần
@@ -156,41 +154,32 @@ docker inspect recipe-frontend
 ### MongoDB Atlas connection failed
 ```bash
 # Kiểm tra MongoDB URI trong logs
-docker-compose logs backend | grep "MongoDB"
-
-# Kiểm tra network connectivity
-docker exec -it recipe-backend sh
-ping cluster0.awyu0je.mongodb.net
+docker-compose logs frontend | grep "MongoDB"
 
 # Verify environment variables
-docker exec -it recipe-backend printenv | grep MONGODB
+docker exec -it recipe-frontend printenv | grep MONGODB
 ```
 
-### Images không hiển thị
-- ✅ Đã fix: `next.config.mjs` có `remotePatterns` cho external images
-- ✅ Verify: Kiểm tra browser console cho image loading errors
-- ✅ Test: Thử truy cập trực tiếp image URL
-
-### Recipes không load
-- ✅ Đã fix: `recipe-browser.tsx` có `recipes` trong useMemo dependencies
-- ✅ Verify: Check browser console log "Recipes loaded: X"
-- ✅ Test: Hard refresh browser (Ctrl+F5)
+### Like/Save không hoạt động
+- ✅ Đã fix: Token được lưu trong Zustand store
+- ✅ Verify: Đăng xuất và đăng nhập lại
+- ✅ Check: Browser console để xem API errors
 
 ## 📝 Environment Variables
 
-### Backend (.env)
+### Frontend (.env.local)
 ```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
-JWT_SECRET=your_secret_key
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/goiymonan
+JWT_SECRET=your_secret_key_min_32_chars
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+### Backend (.env) - Optional
+```env
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/goiymonan
+JWT_SECRET=same_as_frontend
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_app_password
-```
-
-### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/dbname
-JWT_SECRET=same_as_backend
 ```

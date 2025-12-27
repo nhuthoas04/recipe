@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { UserDataSync } from "@/components/auth/user-data-sync"
 import { CleanupLocalStorage } from "@/components/auth/cleanup-localstorage"
 import { ClientOnly } from "@/components/shared/client-only"
-import "./globals.css"
+import "./styles/globals.css"
 
 const notoSans = NotoSans({
   subsets: ["latin", "vietnamese"],
